@@ -56,29 +56,6 @@ else:
 
 # COMMAND ----------
 
-# DBTITLE 1,Wine, Meat,Sweet Products
-# ref = spark.sql("select * from databricksworkspace1.default.Final_Marketing_Table where CustomerID between 1 and 1500").collect()
-# fin_WinePurchases = list([var.MntWines for var in ref])
-# fin_MeatPurchases = list([var.MntMeatProducts for var in ref])
-# fin_SweetPurchases = list([var.MntSweetProducts for var in ref])
-# dbutils.widgets.dropdown("Wine_Purchases", fin_WinePurchases[0], fin_WinePurchases, "Number of Wine Purchases")
-# dbutils.widgets.dropdown("Meat_Purchases", fin_MeatPurchases[0], fin_MeatPurchases, "Number of Meat Purchases")
-# dbutils.widgets.dropdown("Sweet_Purchases", fin_SweetPurchases[0], fin_SweetPurchases, "Number of Sweet Purchases")
-# res_WinePurchases = dbutils.widgets.get("Wine_Purchases")
-# res_MeatPurchases = dbutils.widgets.get("Meat_Purchases")
-# res_SweetPurchases = dbutils.widgets.get("Sweet_Purchases")
-# ref_df = spark.createDataFrame(ref)
-# filter_df = ref_df.filter((ref_df.MntWines == res_WinePurchases)&(ref_df.MntMeatProducts == res_MeatPurchases)&(ref_df.MntSweetProducts == res_SweetPurchases))
-# if filter_df.count() > 0:
-#     result = spark.sql(f"select * from databricksworkspace1.default.Final_Marketing_Table where MntWines = '{res_WinePurchases}' and MntMeatProducts = '{res_MeatPurchases}' and MntSweetProducts = '{res_SweetPurchases}'")
-#     display(result)
-# else:
-#     display("Donot exist")
-
-
-
-# COMMAND ----------
-
 # DBTITLE 1,Recency and Discounts
 dbutils.widgets.text("Customer_Recency", "", "Customer Recency")
 dbutils.widgets.text("Customer_Discounts", "", "Customer Discounts")
@@ -128,6 +105,7 @@ else:
 
 # COMMAND ----------
 
+# DBTITLE 1,Based on Max Wine spendings and Avg Meat spendings.
 from pyspark.sql.functions import *
 dbutils.widgets.text("Customer_MaxWinesSpending", "", "Customer Max Wine Spend")
 dbutils.widgets.text("Customer_AvgMeatsSpending", "", "Customer Avg Meat Spend")
@@ -142,3 +120,24 @@ if filter_df.count() > 0:
 else:
     display("Donot exist")
 
+
+# COMMAND ----------
+
+# Performing some operations so as to input the values to the widgets:-
+
+display(spark.sql("select * from databricksworkspace1.default.Final_Marketing_Table"))
+#---
+# Avg Meat Spendings : 166.95
+display(spark.sql("select avg(MntMeatProducts) as avgmeatSpendings from databricksworkspace1.default.Final_Marketing_Table"))
+#---
+# Max Wine Spendings : 1493
+display(spark.sql("select max(MntWines) as maxwineSpendings from databricksworkspace1.default.Final_Marketing_Table"))
+#---
+# Avg Income : 51687.459375
+display(spark.sql("select avg(Income) as AvgIncome from databricksworkspace1.default.Final_Marketing_Table"))
+
+
+
+# COMMAND ----------
+
+display(spark.sql("select avg(Income) as AvgIncome from databricksworkspace1.default.Final_Marketing_Table"))

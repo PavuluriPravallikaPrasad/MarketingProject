@@ -1,4 +1,5 @@
 # Databricks notebook source
+# DBTITLE 1,Displaying the contents of all the global tempviews.
 display(spark.sql("select * from global_temp.PersonalDetails_GTV"));
 display(spark.sql("select * from global_temp.PurchaseDetails_GTV"));
 display(spark.sql("select * from global_temp.PurchaseStats_GTV"))
@@ -10,6 +11,7 @@ display(spark.sql("select PerD.CustomerID, PerD.DOB,PurD.Dt_Customer, PerD.Marit
 
 # COMMAND ----------
 
+# DBTITLE 1,Performing natural join on PerD with PurD based on CustomerID.
 # To store the result into the DB :-
 # Perform Joins -> Convert to Dataframe -> Save the Dataframe to DB.
 # To perform other joins, again convert the Dataframe to TempView.
@@ -23,6 +25,7 @@ display(spark.sql("select * from databricksworkspace1.default.Personal_Purchase_
 
 # COMMAND ----------
 
+# DBTITLE 1,Performing left outer join on MonthSt with PurSt based on CustomerID.
 # Performing Left Join on Purchase Statistics with corresponding to Month Stat, where if the Store Purchases > Web Purchases, printing the CustomerID, Dt_Customer,... from Purchase Stats and TotalWebSales from Month Stats (only that corresponds the CustomerID, that satisfies the where condition)
 
 Pur_Stat_df1 = spark.sql("select PurSt.CustomerID, PurSt.Dt_Customer, PurSt.NumDealsPurchases, PurSt.NumWebPurchases, PurSt.NumStorePurchases, PurSt.NumWebVisitsMonth, PurSt.Customer_Stats, PurSt.TotalSpending, PurSt.AvgSpending, PurSt.CustomerLTV, MonthSt.* from global_temp.PurchaseStats_GTV as PurSt left outer join global_temp.Month_stats_GTV as MonthSt using (CustomerID) where (PurSt.NumStorePurchases > PurSt.NumWebPurchases)")
@@ -31,6 +34,7 @@ display(Pur_Stat_df1)
 
 # COMMAND ----------
 
+# DBTITLE 1,Performing Left join on PurSt with Month when Numwebpurchases > NumwibvisitsMonth
 # Converting the above created Dataframe to a tempView to perform futher trans.
 
 Pur_Stat_df1.createOrReplaceGlobalTempView('PurStat_df1_GTV')
@@ -48,6 +52,7 @@ Pur_Stat_df2.createOrReplaceGlobalTempView('Pur_Stat_df2_GTV')
 
 # COMMAND ----------
 
+# DBTITLE 1,Performing right join on PurSt with Month using CustomerID, when NumDealPurchases >= 5 and NumStorePurchases > 10.
 # Performing Left Join on Pur_Stat_df2_GTV with corresponding to Month_Stat_GTV, where if NumDealsPurchases >=5 and NumStorePurchases > 10, printing the rows from PurStat_df1_GTV and Month_Stat_GTV (to analyse the Total sales on different modes of purchase) (Only for those customers where )
 
 Pur_Stat_df3 = spark.sql("select PurSt1.Dt_Customer, MonthSt.* from global_temp.Pur_Stat_df2_GTV as PurSt1 right outer join global_temp.Month_stats_GTV as MonthSt using (CustomerID) where (PurSt1.NumDealsPurchases >=5 and PurSt1.NumStorePurchases > 10)")
@@ -64,6 +69,7 @@ display(spark.sql("select * from global_temp.PurchaseStats_GTV"))
 
 # COMMAND ----------
 
+# DBTITLE 1,Performing right join on PurSt with PerD, when marital_Status = married and Customer_Stats = Frequent Buyer and AvgSPending > avg of all the average spendings.
 # Customer marital status = married, num of deal purchases and customer type along with all personal details.
 
 # spark.sql("select PurS.*,PerD.* from global_temp.PurchaseStats_GTV as PurS right outer join global_temp.PersonalDetails_GTV as PerD using (CustomerID) where PerD.Marital_Status = 'Married' and PurS.Customer_Stats = 'Frequent Buyers' and PurS.AvgSpending = (select avg(PurS.AvgSpending) from global_temp.PurchaseStats_GTV)")
@@ -75,6 +81,7 @@ display(RightJoin_df2)
 
 # COMMAND ----------
 
+# DBTITLE 1,Performing left join on PerD with PurSt using CustomerID when Recency >= 30 and Income > 30000
 # Inner Join on PurD with PerD using CustomerID. 
 # Left Join PurD, PerD, PurSt -> Performing left join Innerjoin and PurSt. Checks for all records from inner join and matching records from PurSt, where CustomerID and Dt_Customer must match and Recency in PurSt > 30.
 
@@ -83,6 +90,7 @@ display(spark.sql("select PurD.Dt_Customer, PurD.Recency, PurD.CashBack_Earned, 
 
 # COMMAND ----------
 
+# DBTITLE 1,Performing inner Join on  PurD with PerD (CustomerID), and then joins based on result of the subquery of PurSt (CustomerID, Month, TotalSpending, and AvgSpending) where Year is 2014.
 # Inner Join on  PurD with PerD (CustomerID), and then joins based on result of the subquery of PurSt (CustomerID, Month, TotalSpending, and AvgSpending) where Year is 2014.
 
 display(spark.sql("""
@@ -104,6 +112,7 @@ display(spark.sql("""
 
 # COMMAND ----------
 
+# DBTITLE 1,Performing case statements based on Recency, RewardPoints.
 refine_df = spark.sql("""
           select CustomerID,
           case
@@ -135,12 +144,14 @@ refine_df = spark.sql("""
 
 # COMMAND ----------
 
+# DBTITLE 1,Creating the table from the above dataframe (refine_df).
 
 refine_df.createOrReplaceGlobalTempView("final_table")
 refine_df.write.format("delta").saveAsTable("databricksworkspace1.default.refine_table")
 
 # COMMAND ----------
 
+# DBTITLE 1,Performing join operation on PerPurD, PurSt and refine_table.
 final_dataframe = spark.sql("select PerPurD.*, PurSt.NumDealsPurchases, PurSt.NumWebPurchases, PurSt.NumCatalogPurchases, PurSt.NumStorePurchases, PurSt.NumWebVisitsMonth, Rt.Buyer_Ctg, Rt.Customer_Rwd_Ctg, Rt.Discounts, Rt.Fin_Discounts, MGTV.TotalDealSales, MGTV.TotalWebSales, MGTV.TotalInStoreSales, MGTV.TotalCatalogSales from databricksworkspace1.default.personal_purchase_details as PerPurD join databricksworkspace1.default.customer_purchasestatistics as PurSt using (CustomerID) join databricksworkspace1.default.refine_table as Rt using (CustomerID) join global_temp.Month_stats_GTV as MGTV using(CustomerID)")
 
 final_dataframe.write.format("delta").saveAsTable("databricksworkspace1.default.Final_Marketing_Table")
@@ -149,10 +160,12 @@ display(spark.sql("select * from databricksworkspace1.default.Final_Marketing_Ta
 
 # COMMAND ----------
 
+# DBTITLE 1,Displaying the contents of the above executed query.
 display(spark.sql("select PerPurD.*, PurSt.NumDealsPurchases, PurSt.NumWebPurchases, PurSt.NumCatalogPurchases, PurSt.NumStorePurchases, PurSt.NumWebVisitsMonth, Rt.Buyer_Ctg, Rt.Customer_Rwd_Ctg, Rt.Discounts, Rt.Fin_Discounts, MGTV.TotalDealSales, MGTV.TotalWebSales, MGTV.TotalInStoreSales, MGTV.TotalCatalogSales from databricksworkspace1.default.personal_purchase_details as PerPurD join databricksworkspace1.default.customer_purchasestatistics as PurSt using (CustomerID) join databricksworkspace1.default.refine_table as Rt using (CustomerID) join global_temp.Month_stats_GTV as MGTV using(CustomerID)"))
 
 # COMMAND ----------
 
+# DBTITLE 1,Performing the case statements on Recency and Total_Amt_Spend.
 display(spark.sql("""
           select CustomerID, Recency, (MntWines + MntFruits + MntMeatProducts + MntFishProducts + MntSweetProducts + MntGoldProds) as Total_Amt_Spend,
           case
@@ -176,6 +189,7 @@ display(spark.sql("""
 
 # COMMAND ----------
 
+# DBTITLE 1,Performing case statements based on Recency and RewardPoints.
 display(spark.sql("""
           select CustomerID,
           case
@@ -234,6 +248,7 @@ display(spark.sql("""
 
 # COMMAND ----------
 
+# DBTITLE 1,Same as the above query.
 # refine_df = spark.sql("""
 #           select CustomerID,
 #           case
@@ -271,6 +286,7 @@ display(spark.sql("""
 
 # COMMAND ----------
 
+# DBTITLE 1,Performing case statements based on Dt_Customer, RewardPoints.
 display(spark.sql("""
           select CustomerID,
           case
@@ -288,12 +304,14 @@ display(spark.sql("""
 
 # COMMAND ----------
 
+# DBTITLE 1,Performing rank and dense rank operations.
 display(spark.sql("""
           Select Dt_Customer,NumStorePurchases,CustomerLTV, rank() over (order by NumStorePurchases desc) as StorePurchasesRank, dense_rank() over (order by NumStorePurchases desc) as StorePurchasesDenseRank from global_temp.PurchaseStats_GTV
 """))
 
 # COMMAND ----------
 
+# DBTITLE 1,Performing union all operation PurD, PerD, PurSt.
 # 1st query - CustomerID, Dt_Customer, Recency, MntWines, RewardPoints_Wine, and CashBack_Earned from PurD table where Recency < 60(order by MntWines)(Null as for compatibility).
 #2nd query - DOB, Education, Marital_Status, and Income from PerD table where Income > 50000.
 #3rd query - CustomerID, Dt_Customer, Recency, NumDealsPurchases, NumCatalogPurchases, and NumStorePurchases from PurSt table where NumStorePurchases > 10
@@ -310,8 +328,4 @@ display(spark.sql("""
 
           select CustomerID,Dt_Customer,Recency, null as MntWines,null as RewardPoints_Wine,null as CashBack_Earned,null as DOB,null as Education,null as Marital_Status,null as Income,NumDealsPurchases,NumCatalogPurchases,NumStorePurchases from (select CustomerID,Dt_Customer,Recency,NumDealsPurchases,NumCatalogPurchases,NumStorePurchases from global_temp.PurchaseStats_GTV where NumStorePurchases > 10 order by CustomerID) 
           """))
-
-
-# COMMAND ----------
-
 
